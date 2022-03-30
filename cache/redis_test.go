@@ -7,10 +7,9 @@ import (
 	"time"
 )
 
-var ctx = context.TODO()
-var redisOptions = redis.Options{}
-
 func TestRedisCacheBackend(t *testing.T) {
+	var ctx = context.TODO()
+	var redisOptions = redis.Options{}
 	client := redis.NewClient(&redisOptions)
 	rcb := NewRedisCacheBackend(ctx, client)
 	key := "test"

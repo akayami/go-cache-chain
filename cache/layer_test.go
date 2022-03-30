@@ -22,7 +22,7 @@ func TestLayer(t *testing.T) {
 			return topvalue, false, nil
 		}
 		backend := NewAPIBackend(getter)
-		layer := NewLayer(10*time.Millisecond, 5*time.Millisecond, backend)
+		layer := NewLayer(10*time.Millisecond, 5*time.Millisecond, backend, NewNoLock())
 
 		t.Run("Payload Marshaling", func(t *testing.T) {
 			// Payload{Payload: "test", Stale: 5 * int64(time.Second)}
@@ -67,8 +67,8 @@ func TestLayer(t *testing.T) {
 
 		t.Run("with child backed", func(t *testing.T) {
 			mem := NewMemoryBackend(10)
-			layer2 := NewLayer(2*time.Millisecond, 1*time.Millisecond, mem)
-			layer2.AppendLayer(layer)
+			layer2 := NewLayer(2*time.Millisecond, 1*time.Millisecond, mem, NewNoLock())
+			layer2.AppendLayer(layer, 0)
 			t.Run("Noval", func(t *testing.T) {
 				val, noval, err := layer2.Get("noval")
 				if (val == "" && noval == true && err == nil) == false {
@@ -102,7 +102,7 @@ func TestLayer(t *testing.T) {
 
 		timeUnit := time.Millisecond
 		mem := NewMemoryBackend(10)
-		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem)
+		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, NewNoLock())
 
 		t.Run("Simple noval test on top layer", func(t *testing.T) {
 			val, noval, err := toplayer.Get("key")
@@ -133,8 +133,8 @@ func TestLayer(t *testing.T) {
 			return topvalue, false, nil
 		}
 		backend := NewAPIBackend(getter)
-		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend)
-		toplayer.AppendLayer(bottomLayer)
+		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
+		toplayer.AppendLayer(bottomLayer, 0)
 		t.Run("Triggering lookup in lower level", func(t *testing.T) {
 			val, noval, err := toplayer.Get("inc")
 			if err != nil {
@@ -185,6 +185,40 @@ func TestLayer(t *testing.T) {
 					}
 					time.Sleep(5 * timeUnit)
 				})
+			})
+		})
+	})
+
+	t.Run("Test first fetch race condition prevention", func(t *testing.T) {
+		timeUnit := time.Second
+		mem := NewMemoryBackend(10)
+		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, NewMemoryLock())
+
+		var getter = func(key string) (string, bool, error) {
+			time.Sleep(500 * time.Millisecond)
+			return "val", false, nil
+		}
+
+		backend := NewAPIBackend(getter)
+		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
+		toplayer.AppendLayer(bottomLayer, time.Second)
+
+		t.Run("Should get key", func(t *testing.T) {
+			val, noval, err := toplayer.Get("key1")
+			if err != nil {
+				t.Error(err)
+			}
+			if val != "val" {
+				t.Errorf("Value should equal value")
+			}
+			if noval {
+				t.Errorf("Should be a noval")
+			}
+			t.Run("Should Fail to get key as backend is slow", func(t *testing.T) {
+				_, _, err := toplayer.Get("key1")
+				if _, ok := err.(CacheError); !ok {
+					t.Errorf("Expected Cache Error %s", err.(CacheError))
+				}
 			})
 		})
 	})

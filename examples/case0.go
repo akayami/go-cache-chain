@@ -17,16 +17,7 @@ func main() {
 	// Bootstrapping MemoryBackend
 	MemBackend := cache.NewMemoryBackend(2)
 	// Setting up Top layer
-	TopLayer := cache.NewLayer(50*time.Second, 5*time.Second, MemBackend)
-
-	//var ctx = context.TODO()
-	//var redisOptions = redis.Options{}
-	//// Redis Clients
-	//client := redis.NewClient(&redisOptions)
-	//// Redis Backend
-	//RedisBackend := cache.NewRedisCacheBackend(ctx, client)
-	//// Redis Layer
-	//MidLayer := cache.NewLayer(60*time.Second, 30*time.Second, RedisBackend)
+	TopLayer := cache.NewLayer(50*time.Second, 5*time.Second, MemBackend, cache.NewMemoryLock())
 
 	// Creating an API Backend
 	ApiBackend := cache.NewAPIBackend(func(key string) (string, bool, error) {
@@ -37,19 +28,15 @@ func main() {
 	})
 
 	// Setting up the layer
-	BottomLayer := cache.NewLayer(2*time.Hour, 1*time.Hour, ApiBackend)
+	BottomLayer := cache.NewLayer(2*time.Hour, 1*time.Hour, ApiBackend, cache.NewNoLock())
 
-	// Connecting all Layers in a chain
-	// TopLayer => MidLayer => BottomLayer
-	//MidLayer.AppendLayer(BottomLayer)
-	//TopLayer.AppendLayer(MidLayer)
-
-	TopLayer.AppendLayer(BottomLayer)
+	// Append bottom layer as child, and wait 10 seconds before refresh
+	TopLayer.AppendLayer(BottomLayer, 10*time.Second)
 
 	// Spamming "Key"
 	c := time.Tick(1 * time.Second)
 	for now := range c {
 		val, _, _ := TopLayer.Get("key")
-		fmt.Println(now, val, MemBackend.GetSize())
+		fmt.Println(now, val)
 	}
 }

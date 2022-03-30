@@ -7,11 +7,21 @@ import (
 	"time"
 )
 
+type CacheError struct {
+	Message string
+}
+
+func (e CacheError) Error() string {
+	return fmt.Sprintf("Cache Chain Error occured with following message: " + e.Message)
+}
+
 type Layer struct {
 	child   *Layer
 	backend CacheBackend
 	stale   time.Duration
 	ttl     time.Duration
+	lock    Lock
+	lockTTL time.Duration
 }
 
 type payload struct {
@@ -19,12 +29,18 @@ type payload struct {
 	Stale   time.Time
 }
 
-func NewLayer(ttl time.Duration, stale time.Duration, backend CacheBackend) *Layer {
-	return &Layer{ttl: ttl, stale: stale, backend: backend}
+func NewLayer(ttl time.Duration, stale time.Duration, backend CacheBackend, lock Lock) *Layer {
+	return &Layer{ttl: ttl, stale: stale, backend: backend, lock: lock}
 }
 
-func (l *Layer) AppendLayer(layer *Layer) {
+/*
+Append a child layer to this layer
+@layer - the layer to be appended
+@lockTTL - the amount of time a the parent layer will protect the child layer against duplicate refresh requests.
+*/
+func (l *Layer) AppendLayer(layer *Layer, lockTTL time.Duration) {
 	l.child = layer
+	l.lockTTL = lockTTL
 }
 
 func (l *Layer) marshal(payload payload) ([]byte, error) {
@@ -47,6 +63,11 @@ func (l *Layer) Get(key string) (string, bool, error) {
 	} else if r.isNil() {
 		// Fetch Value from child
 		if l.child != nil {
+			// Get value from the child - Should we use a lock here ? There is a risk of slamming backend for the first key
+			b, err := l.lock.Acquire(key, l.lockTTL)
+			if !b {
+				return "", false, CacheError{Message: "Unable to aquire refresh lock"}
+			}
 			v, noval, err := l.child.Get(key)
 			if err != nil {
 				return "", false, err
@@ -54,6 +75,7 @@ func (l *Layer) Get(key string) (string, bool, error) {
 			if noval {
 				return "", true, nil
 			}
+			// Set/Update local value
 			go func(key string, v string, ttl time.Duration) {
 				// Set value in this layer
 				err := l.Set(key, v)
@@ -62,6 +84,7 @@ func (l *Layer) Get(key string) (string, bool, error) {
 					fmt.Println(err)
 				}
 			}(key, v, l.ttl)
+			// return retrieve value
 			return v, false, nil
 		} else {
 			// No child, signaling no value
@@ -100,6 +123,11 @@ func (l *Layer) Set(key string, value string) error {
 func (l *Layer) refresh(key string) {
 	// Refresh only possible when there is a child layer
 	if l.child != nil {
+		b, err := l.lock.Acquire(key, l.lockTTL)
+		if !b {
+			return
+		}
+		defer l.lock.Release(key)
 		v, noval, err := l.child.Get(key)
 		if err != nil {
 			// Need to handle this better ?
