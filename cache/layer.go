@@ -66,7 +66,7 @@ func (l *Layer) Get(key string) (string, bool, error) {
 			// Get value from the child - Should we use a lock here ? There is a risk of slamming backend for the first key
 			b, err := l.lock.Acquire(key, l.lockTTL)
 			if !b {
-				return "", false, CacheError{Message: "Unable to aquire refresh lock"}
+				return "", false, CacheError{Message: "Unable to acquire refresh lock"}
 			}
 			v, noval, err := l.child.Get(key)
 			if err != nil {
@@ -132,10 +132,11 @@ func (l *Layer) refresh(key string) {
 		if err != nil {
 			// Need to handle this better ?
 			log.Printf("Error occured while trying to refresh key %s: %s", key, err.Error())
-		}
-		if noval {
-			//@todo decide what should be done for noval cases here. Maybe the layer should have a setting to cache novals?
 		} else {
+			if noval {
+				log.Printf("Got noval for key %s. It will be cached.", key)
+			}
+			//@todo decide what should be done for noval cases here. Maybe the layer should have a setting to cache novals?
 			// Attempt to store the value in local cache
 			err := l.Set(key, v)
 			if err != nil {
