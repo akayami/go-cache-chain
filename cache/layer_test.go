@@ -33,7 +33,7 @@ func TestLayer(t *testing.T) {
 			}
 			//sval := string(val)
 			//if sval != "{\"Payload\":\"Test\",\"Stale\":10}" {
-			//	t.Error("Wrong value")
+			//	t.Error("Wrong Value")
 			//}
 			t.Run("Payload Unmarshalling", func(t *testing.T) {
 				_, e := layer.unmarchal(val)
@@ -45,21 +45,22 @@ func TestLayer(t *testing.T) {
 
 		t.Run("without child backend", func(t *testing.T) {
 			t.Run("Noval", func(t *testing.T) {
-				val, noval, err := layer.Get("noval")
-				if (val == "" && noval == true && err == nil) == false {
+
+				res := layer.Get("noval")
+				if (res.Value == "" && res.Nil == true && res.Err == nil) == false {
 					t.Errorf("Invalid response")
 				}
 			})
 			t.Run("Error", func(t *testing.T) {
-				val, noval, err := layer.Get("error")
-				if (val == "" && noval == false && err != nil) == false {
+				res := layer.Get("error")
+				if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
 					t.Errorf("Invalid response")
 				}
 			})
 
 			t.Run("Get Val", func(t *testing.T) {
-				val, noval, err := layer.Get("key")
-				if (val == topvalue && noval == false && err == nil) == false {
+				res := layer.Get("key")
+				if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
 					t.Errorf("Invalid response")
 				}
 			})
@@ -70,27 +71,47 @@ func TestLayer(t *testing.T) {
 			layer2 := NewLayer(2*time.Millisecond, 1*time.Millisecond, mem, NewNoLock())
 			layer2.AppendLayer(layer, 0)
 			t.Run("Noval", func(t *testing.T) {
-				val, noval, err := layer2.Get("noval")
-				if (val == "" && noval == true && err == nil) == false {
-					t.Errorf("Invalid response")
-				}
+
+				t.Run("Noval", func(t *testing.T) {
+
+					res := layer.Get("noval")
+					if (res.Value == "" && res.Nil == true && res.Err == nil) == false {
+						t.Errorf("Invalid response")
+					}
+				})
+				t.Run("Error", func(t *testing.T) {
+					res := layer.Get("error")
+					if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
+						t.Errorf("Invalid response")
+					}
+				})
+
+				t.Run("Get Val", func(t *testing.T) {
+					res := layer.Get("key")
+					if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
+						t.Errorf("Invalid response")
+					}
+				})
+
 			})
 			t.Run("Error", func(t *testing.T) {
-				val, noval, err := layer2.Get("error")
-				if (val == "" && noval == false && err != nil) == false {
+				res := layer.Get("error")
+				if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
 					t.Errorf("Invalid response")
 				}
 			})
 
 			t.Run("Get Val", func(t *testing.T) {
-				val, noval, err := layer2.Get("key")
-				if (val == topvalue && noval == false && err == nil) == false {
+
+				res := layer.Get("key")
+				if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
 					t.Errorf("Invalid response")
 				}
+
 				time.Sleep(1 * time.Millisecond)
-				t.Run("Get cached value", func(t *testing.T) {
-					val, noval, err := layer2.Get("key")
-					if (val == topvalue && noval == false && err == nil) == false {
+				t.Run("Get cached Value", func(t *testing.T) {
+					res := layer.Get("key")
+					if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
 						t.Errorf("Invalid response")
 					}
 				})
@@ -105,14 +126,14 @@ func TestLayer(t *testing.T) {
 		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, NewNoLock())
 
 		t.Run("Simple noval test on top layer", func(t *testing.T) {
-			val, noval, err := toplayer.Get("key")
-			if err != nil {
-				t.Error(err)
+			res := toplayer.Get("key")
+			if res.Err != nil {
+				t.Error(res.Err)
 			}
-			if val != "" {
+			if res.Value != "" {
 				t.Errorf("Value should be empty string")
 			}
-			if !noval {
+			if !res.Nil {
 				t.Errorf("Should be a noval")
 			}
 		})
@@ -136,51 +157,51 @@ func TestLayer(t *testing.T) {
 		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
 		toplayer.AppendLayer(bottomLayer, 0)
 		t.Run("Triggering lookup in lower level", func(t *testing.T) {
-			val, noval, err := toplayer.Get("inc")
-			if err != nil {
-				t.Error(err)
+			res := toplayer.Get("inc")
+			if res.Err != nil {
+				t.Error(res.Err)
 			}
-			if noval != false {
-				t.Errorf("Should be no val")
+			if res.Nil != false {
+				t.Errorf("Should be no noval")
 			}
-			if val != "1" {
+			if res.Value != "1" {
 				t.Errorf("Should be top val")
 			}
 			time.Sleep(10 * timeUnit) // Wait to let the lookup update cache
 			t.Run("This should not go to lower level", func(t *testing.T) {
-				val, noval, err := toplayer.Get("inc")
-				if err != nil {
-					t.Error(err)
+				res := toplayer.Get("inc")
+				if res.Err != nil {
+					t.Error(res.Err)
 				}
-				if noval != false {
-					t.Errorf("Should be no val")
+				if res.Nil != false {
+					t.Errorf("Should be no noval")
 				}
-				if val != "1" {
+				if res.Value != "1" {
 					t.Errorf("Should be top val")
 				}
 			})
-			time.Sleep(55 * timeUnit) // Wait 35 to exceed the stale value
-			t.Run("Should get the stale value and trigger refresh", func(t *testing.T) {
-				val, noval, err := toplayer.Get("inc")
-				if err != nil {
-					t.Error(err)
+			time.Sleep(55 * timeUnit) // Wait 35 to exceed the stale Value
+			t.Run("Should get the stale Value and trigger refresh", func(t *testing.T) {
+				res := toplayer.Get("inc")
+				if res.Err != nil {
+					t.Error(res.Err)
 				}
-				if noval != false {
-					t.Errorf("Should be no val")
+				if res.Nil != false {
+					t.Errorf("Should be no noval")
 				}
-				if val != "1" {
-					t.Errorf("Should be 1, got %s", val)
+				if res.Value != "1" {
+					t.Errorf("Should be top val")
 				}
 				time.Sleep(5 * timeUnit) // Wait one ms to let the lookup update cache
-				t.Run("Should grab the new value from cache and not trigger a refresh", func(t *testing.T) {
-					val, noval, err := toplayer.Get("inc")
-					if err != nil {
-						t.Error(err)
+				t.Run("Should grab the new Value from cache and not trigger a refresh", func(t *testing.T) {
+					res := toplayer.Get("inc")
+					if res.Err != nil {
+						t.Error(res.Err)
 					}
-					if noval != false {
-						t.Errorf("Should be no val")
+					if res.Nil != false {
+						t.Errorf("Should be no noval")
 					}
-					if val != "2" {
+					if res.Value != "2" {
 						t.Errorf("Should be 2. Backend must have refreshed the cache.")
 					}
 					time.Sleep(5 * timeUnit)
@@ -204,20 +225,20 @@ func TestLayer(t *testing.T) {
 		toplayer.AppendLayer(bottomLayer, time.Second)
 
 		t.Run("Should get key", func(t *testing.T) {
-			val, noval, err := toplayer.Get("key1")
-			if err != nil {
-				t.Error(err)
+			res := toplayer.Get("key1")
+			if res.Err != nil {
+				t.Error(res.Err)
 			}
-			if val != "val" {
-				t.Errorf("Value should equal value")
+			if res.Nil != false {
+				t.Errorf("Should be noval")
 			}
-			if noval {
-				t.Errorf("Should be a noval")
+			if res.Value != "val" {
+				t.Errorf("Value should equal val")
 			}
 			t.Run("Should Fail to get key as backend is slow", func(t *testing.T) {
-				_, _, err := toplayer.Get("key1")
-				if _, ok := err.(CacheError); !ok {
-					t.Errorf("Expected Cache Error %s", err.(CacheError))
+				res := toplayer.Get("key1")
+				if _, ok := res.Err.(CacheError); !ok {
+					t.Errorf("Expected Cache Error %s", res.Err.(CacheError))
 				}
 			})
 		})

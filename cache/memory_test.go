@@ -18,10 +18,10 @@ func TestMemoryBacked(t *testing.T) {
 		}
 
 		if res.getError() != nil {
-			t.Errorf("Error has to be nil")
+			t.Errorf("Error has to be Nil")
 		}
 	})
-	t.Run("Test with a value", func(t *testing.T) {
+	t.Run("Test with a Value", func(t *testing.T) {
 		backend.Set("test", "testvalue", 0)
 		res := backend.Get("test")
 		if res.isNil() != false {
@@ -33,10 +33,10 @@ func TestMemoryBacked(t *testing.T) {
 		}
 
 		if res.getError() != nil {
-			t.Errorf("Error has to be nil")
+			t.Errorf("Error has to be Nil")
 		}
 	})
-	t.Run("Overwrite a value", func(t *testing.T) {
+	t.Run("Overwrite a Value", func(t *testing.T) {
 		backend.Set("test", "testvalue2", 0)
 		res := backend.Get("test")
 		if res.isNil() != false {
@@ -48,14 +48,14 @@ func TestMemoryBacked(t *testing.T) {
 		}
 
 		if res.getError() != nil {
-			t.Errorf("Error has to be nil")
+			t.Errorf("Error has to be Nil")
 		}
 		if backend.GetSize() != 1 {
 			t.Errorf("Wrong size %d", backend.GetSize())
 		}
 	})
 
-	t.Run("Delete value", func(t *testing.T) {
+	t.Run("Delete Value", func(t *testing.T) {
 		backend.Del("test")
 		if l := len(backend.list); l > 0 {
 			t.Errorf("List should be empty - Actual length %d", l)
@@ -70,14 +70,14 @@ func TestMemoryBacked(t *testing.T) {
 		}
 
 		if res.getError() != nil {
-			t.Errorf("Error has to be nil")
+			t.Errorf("Error has to be Nil")
 		}
 
 	})
 
 	t.Run("Exceed size limit", func(t *testing.T) {
 		for i := 0; i < 15; i++ {
-			backend.Set(strconv.Itoa(i), "value"+strconv.Itoa(i), 0)
+			backend.Set(strconv.Itoa(i), "Value"+strconv.Itoa(i), 0)
 		}
 		if len(backend.list) != 10 {
 			t.Errorf("Wrong size")

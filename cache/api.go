@@ -10,16 +10,8 @@ type APIBackend struct {
 }
 
 func (A *APIBackend) Get(key string) *CacheBackendResult {
-	res := NewCacheBackendResult()
 	val, noval, err := A.get_handler(key)
-	if err != nil {
-		res.setError(err)
-	} else if noval {
-		res.setNil(true)
-	} else {
-		res.setValue(val)
-	}
-	return res
+	return &CacheBackendResult{Value: val, Nil: noval, Err: err}
 }
 
 func (A *APIBackend) Set(key string, value string, ttl time.Duration) error {

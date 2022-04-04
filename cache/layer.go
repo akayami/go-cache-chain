@@ -53,42 +53,43 @@ func (l *Layer) unmarchal(value []byte) (payload, error) {
 	return pl, err
 }
 
-func (l *Layer) Get(key string) (string, bool, error) {
-	// Get value from own backed
+func (l *Layer) Get(key string) CacheBackendResult {
+	// Get Value from own backed
 	r := l.backend.Get(key)
 	//log.Printf("Getting key %s using backend %s", key, l.backend.GetName())
 	if r.getError() != nil {
 		// Will need a better handling here
-		return "", false, r.getError()
+		return CacheBackendResult{Value: "", Nil: false, Err: r.getError()}
 	} else if r.isNil() {
 		// Fetch Value from child
 		if l.child != nil {
-			// Get value from the child - Should we use a lock here ? There is a risk of slamming backend for the first key
+			// Get Value from the child - Should we use a lock here ? There is a risk of slamming backend for the first key
 			b, err := l.lock.Acquire(key, l.lockTTL)
 			if !b {
-				return "", false, CacheError{Message: "Unable to acquire refresh lock"}
+				return CacheBackendResult{Value: "", Nil: false, Err: CacheError{Message: "Unable to acquire refresh lock"}}
 			}
-			v, noval, err := l.child.Get(key)
-			if err != nil {
-				return "", false, err
+			p := l.child.Get(key)
+
+			if p.getError() != nil {
+				return CacheBackendResult{Value: "", Nil: false, Err: p.getError()}
 			}
-			if noval {
-				return "", true, nil
+			if p.isNil() {
+				return CacheBackendResult{Value: "", Nil: true, Err: nil}
 			}
-			// Set/Update local value
+			// Set/Update local Value
 			go func(key string, v string, ttl time.Duration) {
-				// Set value in this layer
+				// Set Value in this layer
 				err := l.Set(key, v)
-				//log.Printf("Set cache value in the background for key %s with value %v", key, v)
+				//log.Printf("Set cache Value in the background for key %s with Value %v", key, v)
 				if err != nil {
 					fmt.Println(err)
 				}
-			}(key, v, l.ttl)
-			// return retrieve value
-			return v, false, nil
+			}(key, p.getValue(), l.ttl)
+			// return retrieve Value
+			return CacheBackendResult{Value: p.Value, Nil: false, Err: err}
 		} else {
-			// No child, signaling no value
-			return "", true, nil
+			// No child, signaling no Value
+			return CacheBackendResult{Value: "", Nil: true, Err: nil}
 		}
 	} else {
 		// If there is no child, the data should not be marshaled.
@@ -100,10 +101,10 @@ func (l *Layer) Get(key string) (string, bool, error) {
 				//log.Printf("Detected stale %s vs %s", v.Stale, now)
 				go l.refresh(key)
 			}
-			return v.Payload, false, nil
+			return CacheBackendResult{Value: v.Payload, Nil: false, Err: nil}
 		} else {
-			// Return value straight up
-			return r.getValue(), false, nil
+			// Return Value straight up
+			return CacheBackendResult{Value: r.getValue(), Nil: false, Err: nil}
 		}
 	}
 }
@@ -128,17 +129,17 @@ func (l *Layer) refresh(key string) {
 			return
 		}
 		defer l.lock.Release(key)
-		v, noval, err := l.child.Get(key)
+		res := l.child.Get(key)
 		if err != nil {
 			// Need to handle this better ?
 			log.Printf("Error occured while trying to refresh key %s: %s", key, err.Error())
 		} else {
-			if noval {
+			if res.isNil() {
 				log.Printf("Got noval for key %s. It will be cached.", key)
 			}
 			//@todo decide what should be done for noval cases here. Maybe the layer should have a setting to cache novals?
-			// Attempt to store the value in local cache
-			err := l.Set(key, v)
+			// Attempt to store the Value in local cache
+			err := l.Set(key, res.getValue())
 			if err != nil {
 				panic(err)
 			}

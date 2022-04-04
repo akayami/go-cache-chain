@@ -47,11 +47,11 @@ func main() {
 	// Spamming "Key"
 	c := time.Tick(1 * time.Second)
 	for now := range c {
-		val, _, err := TopLayer.Get("key")
-		if err != nil {
-			fmt.Errorf(err.Error())
+		res := TopLayer.Get("key")
+		if res.Err != nil {
+			fmt.Errorf(res.Err.Error())
 		} else {
-			fmt.Println(now, val)
+			fmt.Println(now, res.Value)
 		}
 	}
 }
