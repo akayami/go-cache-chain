@@ -1,10 +1,13 @@
 package cache
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Lock interface {
-	Acquire(key string, ttl time.Duration) (bool, error)
-	Release(key string) error
+	Acquire(ctx context.Context, key string, ttl time.Duration) (bool, error)
+	Release(ctx context.Context, key string) error
 }
 
 type NoLock struct {
@@ -14,10 +17,10 @@ func NewNoLock() *NoLock {
 	return &NoLock{}
 }
 
-func (n *NoLock) Acquire(key string, ttl time.Duration) (bool, error) {
+func (n *NoLock) Acquire(ctx context.Context, key string, ttl time.Duration) (bool, error) {
 	return true, nil
 }
 
-func (n *NoLock) Release(key string) error {
+func (n *NoLock) Release(ctx context.Context, key string) error {
 	return nil
 }

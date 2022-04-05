@@ -1,10 +1,11 @@
 package cache
 
 import (
+	"context"
 	"testing"
 )
 
 func TestMemoryLock(t *testing.T) {
 
-	CommonLockTests(NewMemoryLock(), t)
+	CommonLockTests(context.Background(), NewMemoryLock(), t)
 }

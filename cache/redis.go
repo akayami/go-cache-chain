@@ -8,22 +8,20 @@ import (
 
 type RedisCacheBackend struct {
 	Backend
-	ctx    context.Context
 	client *redis.Client
 }
 
-func NewRedisCacheBackend(c context.Context, client *redis.Client) *RedisCacheBackend {
+func NewRedisCacheBackend(client *redis.Client) *RedisCacheBackend {
 	backend := Backend{"Redis"}
 	return &RedisCacheBackend{
 		backend,
-		c,
 		client,
 	}
 }
 
-func (t *RedisCacheBackend) Get(key string) *CacheBackendResult {
+func (t *RedisCacheBackend) Get(ctx context.Context, key string) *CacheBackendResult {
 	res := NewCacheBackendResult()
-	val, err := t.client.Get(t.ctx, key).Result()
+	val, err := t.client.Get(ctx, key).Result()
 	if err == redis.Nil {
 		res.setNil(true)
 	} else if err != nil {
@@ -34,10 +32,10 @@ func (t *RedisCacheBackend) Get(key string) *CacheBackendResult {
 	return res
 }
 
-func (t *RedisCacheBackend) Set(key string, value string, ttl time.Duration) error {
-	return t.client.Set(t.ctx, key, value, ttl).Err()
+func (t *RedisCacheBackend) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
+	return t.client.Set(ctx, key, value, ttl).Err()
 }
 
-func (t *RedisCacheBackend) Del(key string) error {
-	return t.client.Del(t.ctx, key).Err()
+func (t *RedisCacheBackend) Del(ctx context.Context, key string) error {
+	return t.client.Del(ctx, key).Err()
 }

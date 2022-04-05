@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/akayami/go-cache-chain/cache"
 	"strconv"
@@ -12,6 +13,7 @@ Basic test setup. Memory -> Backed
 */
 
 func main() {
+	ctx := context.Background()
 	counter := 0
 
 	// Bootstrapping MemoryBackend
@@ -20,7 +22,7 @@ func main() {
 	TopLayer := cache.NewLayer(50*time.Second, 5*time.Second, MemBackend, cache.NewMemoryLock())
 
 	// Creating an API Backend
-	ApiBackend := cache.NewAPIBackend(func(key string) (string, bool, error) {
+	ApiBackend := cache.NewAPIBackend(func(ctx context.Context, key string) (string, bool, error) {
 		fmt.Println("Backend Got Called")
 		// This is a stub returning some value. Under normal circumstances, this should wrap some more complex logic fetching data from API, DB or some other store
 		counter++
@@ -36,7 +38,7 @@ func main() {
 	// Spamming "Key"
 	c := time.Tick(1 * time.Second)
 	for now := range c {
-		res := TopLayer.Get("key")
+		res := TopLayer.Get(ctx, "key")
 		fmt.Println(now, res.Value)
 	}
 }

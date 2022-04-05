@@ -1,6 +1,9 @@
 package cache
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 //type CacheBackend interface {
 //	Set(key string, Value string, ttl int) bool
@@ -9,9 +12,9 @@ import "time"
 //}
 
 type CacheBackend interface {
-	Get(key string) *CacheBackendResult
-	Set(key string, value string, ttl time.Duration) error
-	Del(key string) error
+	Get(ctx context.Context, key string) *CacheBackendResult
+	Set(ctx context.Context, key string, value string, ttl time.Duration) error
+	Del(ctx context.Context, key string) error
 	GetName() string
 }
 

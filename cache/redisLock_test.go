@@ -11,7 +11,7 @@ func TestRedisLock(t *testing.T) {
 	var ctx = context.TODO()
 	var redisOptions = redis.Options{}
 	client := redis.NewClient(&redisOptions)
-	h := NewRedisLock(ctx, client)
+	h := NewRedisLock(client)
 
-	CommonLockTests(h, t)
+	CommonLockTests(ctx, h, t)
 }

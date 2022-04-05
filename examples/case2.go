@@ -26,9 +26,9 @@ func main() {
 	// Redis Clients
 	client := redis.NewClient(&redisOptions)
 	// Redis Backend
-	RedisBackend := cache.NewRedisCacheBackend(ctx, client)
+	RedisBackend := cache.NewRedisCacheBackend(client)
 	// Redis Layer
-	MidLayer := cache.NewLayer(300*time.Second, 60*time.Second, RedisBackend, cache.NewRedisLock(ctx, client))
+	MidLayer := cache.NewLayer(300*time.Second, 60*time.Second, RedisBackend, cache.NewRedisLock(client))
 
 	// Creating an API Backend
 	//ApiBackend := cache.NewAPIBackend(func(key string) (string, bool, error) {
@@ -38,7 +38,7 @@ func main() {
 	//	return strconv.Itoa(counter), false, nil
 	//})
 
-	ApiBackend := cache.NewAPIBackend(func(key string) (string, bool, error) {
+	ApiBackend := cache.NewAPIBackend(func(ctx context.Context, key string) (string, bool, error) {
 		fmt.Println("Backend Got Called")
 		client := http.Client{
 			Timeout: 11 * time.Second,
@@ -70,13 +70,13 @@ func main() {
 	c := time.Tick(100 * time.Millisecond)
 	for now := range c {
 		fmt.Println("Go routines", runtime.NumGoroutine())
-		go Cycle(TopLayer, now)
+		go Cycle(ctx, TopLayer, now)
 	}
 }
 
-func Cycle(l *cache.Layer, now time.Time) {
+func Cycle(ctx context.Context, l *cache.Layer, now time.Time) {
 	getResult := make(chan cache.Result)
-	go cache.PersistentGet(l, "key", 1000*time.Millisecond, 100*time.Millisecond, getResult)
+	go cache.PersistentGet(ctx, l, "key", 1000*time.Millisecond, 100*time.Millisecond, getResult)
 	result := <-getResult
 
 	val, noval, err := result.Value, result.Noval, result.Error

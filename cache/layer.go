@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -53,9 +54,9 @@ func (l *Layer) unmarchal(value []byte) (payload, error) {
 	return pl, err
 }
 
-func (l *Layer) Get(key string) CacheBackendResult {
+func (l *Layer) Get(ctx context.Context, key string) CacheBackendResult {
 	// Get Value from own backed
-	r := l.backend.Get(key)
+	r := l.backend.Get(ctx, key)
 	//log.Printf("Getting key %s using backend %s", key, l.backend.GetName())
 	if r.getError() != nil {
 		// Will need a better handling here
@@ -64,11 +65,11 @@ func (l *Layer) Get(key string) CacheBackendResult {
 		// Fetch Value from child
 		if l.child != nil {
 			// Get Value from the child - Should we use a lock here ? There is a risk of slamming backend for the first key
-			b, err := l.lock.Acquire(key, l.lockTTL)
+			b, err := l.lock.Acquire(ctx, key, l.lockTTL)
 			if !b {
 				return CacheBackendResult{Value: "", Nil: false, Err: CacheError{Message: "Unable to acquire refresh lock"}}
 			}
-			p := l.child.Get(key)
+			p := l.child.Get(ctx, key)
 
 			if p.getError() != nil {
 				return CacheBackendResult{Value: "", Nil: false, Err: p.getError()}
@@ -77,14 +78,14 @@ func (l *Layer) Get(key string) CacheBackendResult {
 				return CacheBackendResult{Value: "", Nil: true, Err: nil}
 			}
 			// Set/Update local Value
-			go func(key string, v string, ttl time.Duration) {
+			go func(ctx context.Context, key string, v string, ttl time.Duration) {
 				// Set Value in this layer
-				err := l.Set(key, v)
+				err := l.Set(ctx, key, v)
 				//log.Printf("Set cache Value in the background for key %s with Value %v", key, v)
 				if err != nil {
 					fmt.Println(err)
 				}
-			}(key, p.getValue(), l.ttl)
+			}(ctx, key, p.getValue(), l.ttl)
 			// return retrieve Value
 			return CacheBackendResult{Value: p.Value, Nil: false, Err: err}
 		} else {
@@ -99,7 +100,7 @@ func (l *Layer) Get(key string) CacheBackendResult {
 			now := time.Now()
 			if v.Stale.Before(now) {
 				//log.Printf("Detected stale %s vs %s", v.Stale, now)
-				go l.refresh(key)
+				go l.refresh(ctx, key)
 			}
 			return CacheBackendResult{Value: v.Payload, Nil: false, Err: nil}
 		} else {
@@ -109,7 +110,7 @@ func (l *Layer) Get(key string) CacheBackendResult {
 	}
 }
 
-func (l *Layer) Set(key string, value string) error {
+func (l *Layer) Set(ctx context.Context, key string, value string) error {
 	// create Payload
 	payload := payload{value, time.Now().Add(l.stale)}
 	// marshal the Payload with Stale argument.
@@ -118,18 +119,18 @@ func (l *Layer) Set(key string, value string) error {
 		panic(err)
 	}
 	// Store marshaled data in the backend.
-	return l.backend.Set(key, string(marshaled_payload), l.ttl)
+	return l.backend.Set(ctx, key, string(marshaled_payload), l.ttl)
 }
 
-func (l *Layer) refresh(key string) {
+func (l *Layer) refresh(ctx context.Context, key string) {
 	// Refresh only possible when there is a child layer
 	if l.child != nil {
-		b, err := l.lock.Acquire(key, l.lockTTL)
+		b, err := l.lock.Acquire(ctx, key, l.lockTTL)
 		if !b {
 			return
 		}
-		defer l.lock.Release(key)
-		res := l.child.Get(key)
+		defer l.lock.Release(ctx, key)
+		res := l.child.Get(ctx, key)
 		if err != nil {
 			// Need to handle this better ?
 			log.Printf("Error occured while trying to refresh key %s: %s", key, err.Error())
@@ -139,7 +140,7 @@ func (l *Layer) refresh(key string) {
 			}
 			//@todo decide what should be done for noval cases here. Maybe the layer should have a setting to cache novals?
 			// Attempt to store the Value in local cache
-			err := l.Set(key, res.getValue())
+			err := l.Set(ctx, key, res.getValue())
 			if err != nil {
 				panic(err)
 			}

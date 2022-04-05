@@ -1,14 +1,16 @@
 package cache
 
 import (
+	"context"
 	"strconv"
 	"testing"
 )
 
 func TestMemoryBacked(t *testing.T) {
+	ctx := context.Background()
 	backend := NewMemoryBackend(10)
 	t.Run("Empty Tests", func(t *testing.T) {
-		res := backend.Get("key")
+		res := backend.Get(ctx, "key")
 		if res.isNil() != true {
 			t.Errorf("Invalid result")
 		}
@@ -22,8 +24,8 @@ func TestMemoryBacked(t *testing.T) {
 		}
 	})
 	t.Run("Test with a Value", func(t *testing.T) {
-		backend.Set("test", "testvalue", 0)
-		res := backend.Get("test")
+		backend.Set(ctx, "test", "testvalue", 0)
+		res := backend.Get(ctx, "test")
 		if res.isNil() != false {
 			t.Errorf("Invalid result")
 		}
@@ -37,8 +39,8 @@ func TestMemoryBacked(t *testing.T) {
 		}
 	})
 	t.Run("Overwrite a Value", func(t *testing.T) {
-		backend.Set("test", "testvalue2", 0)
-		res := backend.Get("test")
+		backend.Set(ctx, "test", "testvalue2", 0)
+		res := backend.Get(ctx, "test")
 		if res.isNil() != false {
 			t.Errorf("Invalid result")
 		}
@@ -56,11 +58,11 @@ func TestMemoryBacked(t *testing.T) {
 	})
 
 	t.Run("Delete Value", func(t *testing.T) {
-		backend.Del("test")
+		backend.Del(ctx, "test")
 		if l := len(backend.list); l > 0 {
 			t.Errorf("List should be empty - Actual length %d", l)
 		}
-		res := backend.Get("test")
+		res := backend.Get(ctx, "test")
 		if res.isNil() != true {
 			t.Errorf("Invalid result")
 		}
@@ -77,7 +79,7 @@ func TestMemoryBacked(t *testing.T) {
 
 	t.Run("Exceed size limit", func(t *testing.T) {
 		for i := 0; i < 15; i++ {
-			backend.Set(strconv.Itoa(i), "Value"+strconv.Itoa(i), 0)
+			backend.Set(ctx, strconv.Itoa(i), "Value"+strconv.Itoa(i), 0)
 		}
 		if len(backend.list) != 10 {
 			t.Errorf("Wrong size")
@@ -92,7 +94,7 @@ func TestMemoryBacked(t *testing.T) {
 			if backend.list[9] != "14" {
 				t.Errorf("Wrong size")
 			}
-			backend.Get("5")
+			backend.Get(ctx, "5")
 			if backend.list[9] != "5" {
 				t.Errorf("Wrong size")
 			}
@@ -102,7 +104,7 @@ func TestMemoryBacked(t *testing.T) {
 			if backend.list[0] != "6" {
 				t.Errorf("Wrong size")
 			}
-			backend.Get("6")
+			backend.Get(ctx, "6")
 			if backend.list[9] != "6" {
 				t.Errorf("Wrong size")
 			}

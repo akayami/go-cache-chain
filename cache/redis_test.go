@@ -11,11 +11,11 @@ func TestRedisCacheBackend(t *testing.T) {
 	var ctx = context.TODO()
 	var redisOptions = redis.Options{}
 	client := redis.NewClient(&redisOptions)
-	rcb := NewRedisCacheBackend(ctx, client)
+	rcb := NewRedisCacheBackend(client)
 	key := "test"
 
 	t.Run("Gets Nil on no key request", func(t *testing.T) {
-		if !rcb.Get(key).isNil() {
+		if !rcb.Get(ctx, key).isNil() {
 			t.Errorf("Expected isNil to be false")
 		}
 	})
@@ -26,7 +26,7 @@ func TestRedisCacheBackend(t *testing.T) {
 		if res.Err() != nil {
 			t.Error(res.Err())
 		}
-		get := rcb.Get("test")
+		get := rcb.Get(ctx, "test")
 
 		if get.isNil() {
 			t.Error("Should not be Nil")
@@ -43,21 +43,21 @@ func TestRedisCacheBackend(t *testing.T) {
 	})
 
 	t.Run("Need to set a key", func(t *testing.T) {
-		rcb.Set(key, "value2", 3*time.Second)
-		if rcb.Get(key).getValue() != "value2" {
+		rcb.Set(ctx, key, "value2", 3*time.Second)
+		if rcb.Get(ctx, key).getValue() != "value2" {
 			t.Error("Should have a Value equal to value2")
 		}
 	})
 
 	t.Run("Need to delete a key", func(t *testing.T) {
-		rcb.Set(key, "value2", 3*time.Second)
-		if rcb.Get(key).getValue() != "value2" {
+		rcb.Set(ctx, key, "value2", 3*time.Second)
+		if rcb.Get(ctx, key).getValue() != "value2" {
 			t.Error("Should have a Value equal to value2")
 		}
-		if rcb.Del(key) != nil {
+		if rcb.Del(ctx, key) != nil {
 			t.Error("Should have deleted without errors")
 		}
-		if !rcb.Get(key).isNil() {
+		if !rcb.Get(ctx, key).isNil() {
 			t.Error("Should be Nil")
 		}
 	})

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
@@ -8,11 +9,10 @@ import (
 )
 
 func TestLayer(t *testing.T) {
-
+	ctx := context.Background()
 	t.Run("Basic Logic", func(t *testing.T) {
-
 		topvalue := "TopValue"
-		getter := func(k string) (string, bool, error) {
+		getter := func(ctx context.Context, k string) (string, bool, error) {
 			if k == "error" {
 				return "", false, errors.New("Error")
 			}
@@ -46,20 +46,20 @@ func TestLayer(t *testing.T) {
 		t.Run("without child backend", func(t *testing.T) {
 			t.Run("Noval", func(t *testing.T) {
 
-				res := layer.Get("noval")
+				res := layer.Get(ctx, "noval")
 				if (res.Value == "" && res.Nil == true && res.Err == nil) == false {
 					t.Errorf("Invalid response")
 				}
 			})
 			t.Run("Error", func(t *testing.T) {
-				res := layer.Get("error")
+				res := layer.Get(ctx, "error")
 				if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
 					t.Errorf("Invalid response")
 				}
 			})
 
 			t.Run("Get Val", func(t *testing.T) {
-				res := layer.Get("key")
+				res := layer.Get(ctx, "key")
 				if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
 					t.Errorf("Invalid response")
 				}
@@ -74,20 +74,20 @@ func TestLayer(t *testing.T) {
 
 				t.Run("Noval", func(t *testing.T) {
 
-					res := layer.Get("noval")
+					res := layer.Get(ctx, "noval")
 					if (res.Value == "" && res.Nil == true && res.Err == nil) == false {
 						t.Errorf("Invalid response")
 					}
 				})
 				t.Run("Error", func(t *testing.T) {
-					res := layer.Get("error")
+					res := layer.Get(ctx, "error")
 					if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
 						t.Errorf("Invalid response")
 					}
 				})
 
 				t.Run("Get Val", func(t *testing.T) {
-					res := layer.Get("key")
+					res := layer.Get(ctx, "key")
 					if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
 						t.Errorf("Invalid response")
 					}
@@ -95,7 +95,7 @@ func TestLayer(t *testing.T) {
 
 			})
 			t.Run("Error", func(t *testing.T) {
-				res := layer.Get("error")
+				res := layer.Get(ctx, "error")
 				if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
 					t.Errorf("Invalid response")
 				}
@@ -103,14 +103,14 @@ func TestLayer(t *testing.T) {
 
 			t.Run("Get Val", func(t *testing.T) {
 
-				res := layer.Get("key")
+				res := layer.Get(ctx, "key")
 				if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
 					t.Errorf("Invalid response")
 				}
 
 				time.Sleep(1 * time.Millisecond)
 				t.Run("Get cached Value", func(t *testing.T) {
-					res := layer.Get("key")
+					res := layer.Get(ctx, "key")
 					if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
 						t.Errorf("Invalid response")
 					}
@@ -126,7 +126,7 @@ func TestLayer(t *testing.T) {
 		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, NewNoLock())
 
 		t.Run("Simple noval test on top layer", func(t *testing.T) {
-			res := toplayer.Get("key")
+			res := toplayer.Get(ctx, "key")
 			if res.Err != nil {
 				t.Error(res.Err)
 			}
@@ -139,7 +139,7 @@ func TestLayer(t *testing.T) {
 		})
 		counter := 0
 		topvalue := "TopValue"
-		getter := func(k string) (string, bool, error) {
+		getter := func(ctx context.Context, k string) (string, bool, error) {
 			if k == "error" {
 				return "", false, errors.New("Error")
 			}
@@ -157,7 +157,7 @@ func TestLayer(t *testing.T) {
 		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
 		toplayer.AppendLayer(bottomLayer, 0)
 		t.Run("Triggering lookup in lower level", func(t *testing.T) {
-			res := toplayer.Get("inc")
+			res := toplayer.Get(ctx, "inc")
 			if res.Err != nil {
 				t.Error(res.Err)
 			}
@@ -169,7 +169,7 @@ func TestLayer(t *testing.T) {
 			}
 			time.Sleep(10 * timeUnit) // Wait to let the lookup update cache
 			t.Run("This should not go to lower level", func(t *testing.T) {
-				res := toplayer.Get("inc")
+				res := toplayer.Get(ctx, "inc")
 				if res.Err != nil {
 					t.Error(res.Err)
 				}
@@ -182,7 +182,7 @@ func TestLayer(t *testing.T) {
 			})
 			time.Sleep(55 * timeUnit) // Wait 35 to exceed the stale Value
 			t.Run("Should get the stale Value and trigger refresh", func(t *testing.T) {
-				res := toplayer.Get("inc")
+				res := toplayer.Get(ctx, "inc")
 				if res.Err != nil {
 					t.Error(res.Err)
 				}
@@ -194,7 +194,7 @@ func TestLayer(t *testing.T) {
 				}
 				time.Sleep(5 * timeUnit) // Wait one ms to let the lookup update cache
 				t.Run("Should grab the new Value from cache and not trigger a refresh", func(t *testing.T) {
-					res := toplayer.Get("inc")
+					res := toplayer.Get(ctx, "inc")
 					if res.Err != nil {
 						t.Error(res.Err)
 					}
@@ -215,7 +215,7 @@ func TestLayer(t *testing.T) {
 		mem := NewMemoryBackend(10)
 		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, NewMemoryLock())
 
-		var getter = func(key string) (string, bool, error) {
+		var getter = func(ctx context.Context, key string) (string, bool, error) {
 			time.Sleep(500 * time.Millisecond)
 			return "val", false, nil
 		}
@@ -225,7 +225,7 @@ func TestLayer(t *testing.T) {
 		toplayer.AppendLayer(bottomLayer, time.Second)
 
 		t.Run("Should get key", func(t *testing.T) {
-			res := toplayer.Get("key1")
+			res := toplayer.Get(ctx, "key1")
 			if res.Err != nil {
 				t.Error(res.Err)
 			}
@@ -236,7 +236,7 @@ func TestLayer(t *testing.T) {
 				t.Errorf("Value should equal val")
 			}
 			t.Run("Should Fail to get key as backend is slow", func(t *testing.T) {
-				res := toplayer.Get("key1")
+				res := toplayer.Get(ctx, "key1")
 				if _, ok := res.Err.(CacheError); !ok {
 					t.Errorf("Expected Cache Error %s", res.Err.(CacheError))
 				}

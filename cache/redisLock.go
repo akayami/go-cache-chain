@@ -7,33 +7,32 @@ import (
 )
 
 type RedisLock struct {
-	ctx    context.Context
 	client *redis.Client
 	prefix string
 }
 
-func NewRedisLock(c context.Context, client *redis.Client) *RedisLock {
-	return &RedisLock{ctx: c, client: client, prefix: "lock_"}
+func NewRedisLock(client *redis.Client) *RedisLock {
+	return &RedisLock{client: client, prefix: "lock_"}
 }
 
-func NewRedisLockWithPrefix(c context.Context, client *redis.Client, prefix string) *RedisLock {
-	return &RedisLock{ctx: c, client: client, prefix: prefix}
+func NewRedisLockWithPrefix(client *redis.Client, prefix string) *RedisLock {
+	return &RedisLock{client: client, prefix: prefix}
 }
 
 func (c *RedisLock) getKey(key string) string {
 	return c.prefix + key
 }
 
-func (c *RedisLock) Acquire(key string, ttl time.Duration) (bool, error) {
-	res, err := c.client.SetNX(c.ctx, c.getKey(key), true, ttl).Result()
+func (c *RedisLock) Acquire(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	res, err := c.client.SetNX(ctx, c.getKey(key), true, ttl).Result()
 	if err != nil {
 		return false, err
 	}
 	return res, err
 }
 
-func (c *RedisLock) Release(key string) error {
-	_, err := c.client.Del(c.ctx, c.getKey(key)).Result()
+func (c *RedisLock) Release(ctx context.Context, key string) error {
+	_, err := c.client.Del(ctx, c.getKey(key)).Result()
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"time"
 )
 
@@ -15,7 +16,7 @@ func NewMemoryBackend(size int) *MemoryBackend {
 	return &MemoryBackend{Backend{name: "Memory"}, size, map[string]string{}, []string{}}
 }
 
-func (c *MemoryBackend) Get(key string) *CacheBackendResult {
+func (c *MemoryBackend) Get(ctx context.Context, key string) *CacheBackendResult {
 	res := NewCacheBackendResult()
 	if val, ok := c.store[key]; ok {
 		res.setValue(val)
@@ -28,7 +29,7 @@ func (c *MemoryBackend) Get(key string) *CacheBackendResult {
 	return res
 }
 
-func (c *MemoryBackend) Set(key string, value string, ttl time.Duration) error {
+func (c *MemoryBackend) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
 	if _, ok := c.store[key]; ok == false {
 		c.store[key] = value
 		if len(c.list) >= c.size {
@@ -43,7 +44,7 @@ func (c *MemoryBackend) Set(key string, value string, ttl time.Duration) error {
 	return nil
 }
 
-func (c *MemoryBackend) Del(key string) error {
+func (c *MemoryBackend) Del(ctx context.Context, key string) error {
 	// delete key
 	delete(c.store, key)
 	// cleanup the list
