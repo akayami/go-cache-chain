@@ -1,0 +1,11 @@
+syntax = "proto3";
+package cache;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "schema/";
+
+message Payload {
+  google.protobuf.Timestamp Stale = 1;
+  string Payload = 2;
+}

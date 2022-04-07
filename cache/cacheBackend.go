@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-//type CacheBackend interface {
-//	Set(key string, Value string, ttl int) bool
-//	Get(key string) string
-//	Del(key string) bool
-//}
-
 type CacheBackend interface {
 	Get(ctx context.Context, key string) *CacheBackendResult
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error

@@ -210,7 +210,7 @@ func TestLayer(t *testing.T) {
 		})
 	})
 
-	t.Run("Test first fetch race condition prevention", func(t *testing.T) {
+	t.Run("Test first fetch race condition prevention (Locking)", func(t *testing.T) {
 		timeUnit := time.Second
 		mem := NewMemoryBackend(10)
 		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, NewMemoryLock())
@@ -235,8 +235,15 @@ func TestLayer(t *testing.T) {
 			if res.Value != "val" {
 				t.Errorf("Value should equal val")
 			}
+			// This seems a bit flaky
 			t.Run("Should Fail to get key as backend is slow", func(t *testing.T) {
 				res := toplayer.Get(ctx, "key1")
+				if res.Value != "" {
+					t.Error("Value should be empty")
+				}
+				if res.Nil != false {
+					t.Errorf("Should not be nil")
+				}
 				if _, ok := res.Err.(CacheError); !ok {
 					t.Errorf("Expected Cache Error %s", res.Err.(CacheError))
 				}

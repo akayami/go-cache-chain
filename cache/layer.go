@@ -2,8 +2,10 @@ package cache
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/akayami/go-cache-chain/cache/schema"
+	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"time"
 )
@@ -45,13 +47,22 @@ func (l *Layer) AppendLayer(layer *Layer, lockTTL time.Duration) {
 }
 
 func (l *Layer) marshal(payload payload) ([]byte, error) {
-	return json.Marshal(payload)
+	pbf := &schema.Payload{Payload: payload.Payload, Stale: timestamppb.New(payload.Stale)}
+	data, err := proto.Marshal(pbf)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 func (l *Layer) unmarchal(value []byte) (payload, error) {
-	pl := payload{}
-	err := json.Unmarshal(value, &pl)
-	return pl, err
+	ppbPayload := &schema.Payload{}
+	err := proto.Unmarshal(value, ppbPayload)
+	if err != nil {
+		return payload{}, err
+	}
+	pl := payload{Payload: ppbPayload.Payload, Stale: ppbPayload.Stale.AsTime()}
+	return pl, nil
 }
 
 func (l *Layer) Get(ctx context.Context, key string) CacheBackendResult {

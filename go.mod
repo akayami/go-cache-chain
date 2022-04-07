@@ -4,8 +4,11 @@ go 1.17
 
 require (
 	github.com/go-redis/redis/v8 v8.11.4
+	github.com/gogo/protobuf v1.3.2
+	github.com/golang/protobuf v1.5.2
 	github.com/mailru/easyjson v0.7.7
 	github.com/stretchr/testify v1.5.1
+	google.golang.org/protobuf v1.28.0
 )
 
 require (
