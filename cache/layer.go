@@ -56,7 +56,7 @@ func (l *Layer) marshal(payload payload) ([]byte, error) {
 	return data, nil
 }
 
-func (l *Layer) unmarchal(value []byte) (payload, error) {
+func (l *Layer) unmarshal(value []byte) (payload, error) {
 	ppbPayload := &schema.Payload{}
 	err := proto.Unmarshal(value, ppbPayload)
 	if err != nil {
@@ -115,7 +115,7 @@ func (l *Layer) Get(ctx context.Context, key string, fallback Getter) CacheBacke
 		// If there is no child, the data should not be marshaled.
 		// @todo review this logic
 		if l.backend.IsMarshaled() {
-			v, _ := l.unmarchal([]byte(r.getValue()))
+			v, _ := l.unmarshal([]byte(r.getValue()))
 			now := time.Now()
 			if v.Stale.Before(now) {
 				//log.Printf("Detected stale %s vs %s", v.Stale, now)

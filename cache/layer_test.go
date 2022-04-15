@@ -37,7 +37,7 @@ func TestLayer(t *testing.T) {
 			//	t.Error("Wrong Value")
 			//}
 			t.Run("Payload Unmarshalling", func(t *testing.T) {
-				_, e := layer.unmarchal(val)
+				_, e := layer.unmarshal(val)
 				if e != nil {
 					t.Error(e)
 				}
