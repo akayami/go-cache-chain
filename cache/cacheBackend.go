@@ -10,6 +10,7 @@ type CacheBackend interface {
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 	Del(ctx context.Context, key string) error
 	GetName() string
+	IsMarshaled() bool
 }
 
 type CacheBackendResult struct {

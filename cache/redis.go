@@ -12,7 +12,7 @@ type RedisCacheBackend struct {
 }
 
 func NewRedisCacheBackend(client *redis.Client) *RedisCacheBackend {
-	backend := Backend{"Redis"}
+	backend := Backend{"Redis", true}
 	return &RedisCacheBackend{
 		backend,
 		client,

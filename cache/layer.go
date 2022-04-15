@@ -7,6 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
+	"os"
 	"time"
 )
 
@@ -65,7 +66,7 @@ func (l *Layer) unmarchal(value []byte) (payload, error) {
 	return pl, nil
 }
 
-func (l *Layer) Get(ctx context.Context, key string) CacheBackendResult {
+func (l *Layer) Get(ctx context.Context, key string, fallback Getter) CacheBackendResult {
 	// Get Value from own backed
 	r := l.backend.Get(ctx, key)
 	//log.Printf("Getting key %s using backend %s", key, l.backend.GetName())
@@ -74,13 +75,19 @@ func (l *Layer) Get(ctx context.Context, key string) CacheBackendResult {
 		return CacheBackendResult{Value: "", Nil: false, Err: r.getError()}
 	} else if r.isNil() {
 		// Fetch Value from child
-		if l.child != nil {
+		if l.child != nil || fallback != nil {
 			// Get Value from the child - Should we use a lock here ? There is a risk of slamming backend for the first key
 			b, err := l.lock.Acquire(ctx, key, l.lockTTL)
 			if !b {
 				return CacheBackendResult{Value: "", Nil: false, Err: CacheError{Message: "Unable to acquire refresh lock"}}
 			}
-			p := l.child.Get(ctx, key)
+			var p CacheBackendResult
+			if l.child != nil {
+				p = l.child.Get(ctx, key, fallback)
+			} else {
+				val, noval, err := fallback(ctx, key)
+				p = CacheBackendResult{Value: val, Nil: noval, Err: err}
+			}
 
 			l.lock.Release(ctx, key)
 
@@ -102,22 +109,21 @@ func (l *Layer) Get(ctx context.Context, key string) CacheBackendResult {
 			// return retrieve Value
 			return CacheBackendResult{Value: p.Value, Nil: false, Err: err}
 		} else {
-			// No child, signaling no Value
 			return CacheBackendResult{Value: "", Nil: true, Err: nil}
 		}
 	} else {
 		// If there is no child, the data should not be marshaled.
 		// @todo review this logic
-		if l.child != nil {
+		if l.backend.IsMarshaled() {
 			v, _ := l.unmarchal([]byte(r.getValue()))
 			now := time.Now()
 			if v.Stale.Before(now) {
 				//log.Printf("Detected stale %s vs %s", v.Stale, now)
-				go l.refresh(ctx, key)
+				go l.refresh(ctx, key, fallback)
 			}
 			return CacheBackendResult{Value: v.Payload, Nil: false, Err: nil}
 		} else {
-			// Return Value straight up
+			//Return Value straight up
 			return CacheBackendResult{Value: r.getValue(), Nil: false, Err: nil}
 		}
 	}
@@ -135,15 +141,21 @@ func (l *Layer) Set(ctx context.Context, key string, value string) error {
 	return l.backend.Set(ctx, key, string(marshaled_payload), l.ttl)
 }
 
-func (l *Layer) refresh(ctx context.Context, key string) {
+func (l *Layer) refresh(ctx context.Context, key string, fallback Getter) {
 	// Refresh only possible when there is a child layer
-	if l.child != nil {
+	if l.child != nil || fallback != nil {
 		b, err := l.lock.Acquire(ctx, key, l.lockTTL)
 		if !b {
 			return
 		}
 		defer l.lock.Release(ctx, key)
-		res := l.child.Get(ctx, key)
+		var res CacheBackendResult
+		if l.child != nil {
+			res = l.child.Get(ctx, key, fallback)
+		} else {
+			val, noval, err := fallback(ctx, key)
+			res = CacheBackendResult{Value: val, Nil: noval, Err: err}
+		}
 		if err != nil {
 			// Need to handle this better ?
 			log.Printf("Error occured while trying to refresh key %s: %s", key, err.Error())
@@ -155,7 +167,7 @@ func (l *Layer) refresh(ctx context.Context, key string) {
 			// Attempt to store the Value in local cache
 			err := l.Set(ctx, key, res.getValue())
 			if err != nil {
-				panic(err)
+				fmt.Fprintln(os.Stderr, err)
 			}
 		}
 	}

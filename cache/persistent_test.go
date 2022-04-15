@@ -32,7 +32,7 @@ func TestPresistent(t *testing.T) {
 		TopLayer.AppendLayer(BottomLayer, 1000*time.Millisecond)
 
 		ch := make(chan Result)
-		go PersistentGet(ctx, TopLayer, "key", 5*time.Second, 10*time.Millisecond, ch)
+		go PersistentGet(ctx, TopLayer, "key", getter, 5*time.Second, 10*time.Millisecond, ch)
 		result := <-ch
 		close(ch)
 		if result.Noval {
@@ -66,7 +66,7 @@ func TestPresistent(t *testing.T) {
 		TopLayer.AppendLayer(BottomLayer, 1000*time.Millisecond)
 
 		ch := make(chan Result)
-		go PersistentGet(ctx, TopLayer, "key", 10*time.Millisecond, 1*time.Millisecond, ch)
+		go PersistentGet(ctx, TopLayer, "key", getter, 10*time.Millisecond, 1*time.Millisecond, ch)
 		result := <-ch
 		close(ch)
 		if result.Noval {

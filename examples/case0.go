@@ -38,7 +38,7 @@ func main() {
 	// Spamming "Key"
 	c := time.Tick(1 * time.Second)
 	for now := range c {
-		res := TopLayer.Get(ctx, "key")
+		res := TopLayer.Get(ctx, "key", nil)
 		fmt.Println(now, res.Value)
 	}
 }

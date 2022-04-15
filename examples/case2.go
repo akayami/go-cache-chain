@@ -30,14 +30,6 @@ func main() {
 	// Redis Layer
 	MidLayer := cache.NewLayer(300*time.Second, 60*time.Second, RedisBackend, cache.NewRedisLock(client))
 
-	// Creating an API Backend
-	//ApiBackend := cache.NewAPIBackend(func(key string) (string, bool, error) {
-	//	fmt.Println("Backend Got Called")
-	//	// This is a stub returning some value. Under normal circumstances, this should wrap some more complex logic fetching data from API, DB or some other store
-	//	counter++
-	//	return strconv.Itoa(counter), false, nil
-	//})
-
 	ApiBackend := cache.NewAPIBackend(func(ctx context.Context, key string) (string, bool, error) {
 		fmt.Println("Backend Got Called")
 		client := http.Client{
@@ -76,7 +68,7 @@ func main() {
 
 func Cycle(ctx context.Context, l *cache.Layer, now time.Time) {
 	getResult := make(chan cache.Result)
-	go cache.PersistentGet(ctx, l, "key", 1000*time.Millisecond, 100*time.Millisecond, getResult)
+	go cache.PersistentGet(ctx, l, "newkey", nil, 1000*time.Millisecond, 100*time.Millisecond, getResult)
 	result := <-getResult
 
 	val, noval, err := result.Value, result.Noval, result.Error

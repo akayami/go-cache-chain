@@ -13,7 +13,7 @@ type MemoryBackend struct {
 }
 
 func NewMemoryBackend(size int) *MemoryBackend {
-	return &MemoryBackend{Backend{name: "Memory"}, size, map[string]string{}, []string{}}
+	return &MemoryBackend{Backend{name: "Memory", marshal: true}, size, map[string]string{}, []string{}}
 }
 
 func (c *MemoryBackend) Get(ctx context.Context, key string) *CacheBackendResult {

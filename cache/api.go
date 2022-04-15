@@ -26,5 +26,5 @@ func (A *APIBackend) Del(ctx context.Context, key string) error {
 }
 
 func NewAPIBackend(fn Getter) *APIBackend {
-	return &APIBackend{Backend{name: "API"}, fn}
+	return &APIBackend{Backend{name: "API", marshal: false}, fn}
 }
