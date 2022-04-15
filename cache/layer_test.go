@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"errors"
+	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
 	"time"
@@ -213,41 +214,41 @@ func TestLayer(t *testing.T) {
 	t.Run("Test first fetch race condition prevention (Locking)", func(t *testing.T) {
 		timeUnit := time.Second
 		mem := NewMemoryBackend(10)
-		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, NewMemoryLock())
+		memLock := NewMemoryLock()
+		toplayer := NewLayer(100*timeUnit, 50*timeUnit, mem, memLock)
 
 		var getter = func(ctx context.Context, key string) (string, bool, error) {
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			return "val", false, nil
 		}
 
 		backend := NewAPIBackend(getter)
 		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
-		toplayer.AppendLayer(bottomLayer, time.Second)
+		toplayer.AppendLayer(bottomLayer, 2*time.Second)
 
-		t.Run("Should get key", func(t *testing.T) {
-			res := toplayer.Get(ctx, "key1")
-			if res.Err != nil {
-				t.Error(res.Err)
-			}
-			if res.Nil != false {
-				t.Errorf("Should be noval")
-			}
-			if res.Value != "val" {
-				t.Errorf("Value should equal val")
-			}
-			// This seems a bit flaky
-			t.Run("Should Fail to get key as backend is slow", func(t *testing.T) {
+		// Under normal circumstances we should be able to get the key
+		t.Run("Test key locking mechanism and returning cache error", func(t *testing.T) {
+			done := make(chan bool)
+			go func(done chan bool) {
 				res := toplayer.Get(ctx, "key1")
-				if res.Value != "" {
-					t.Error("Value should be empty")
-				}
-				if res.Nil != false {
-					t.Errorf("Should not be nil")
-				}
-				if _, ok := res.Err.(CacheError); !ok {
-					t.Errorf("Expected Cache Error %s", res.Err.(CacheError))
-				}
+				lock := memLock.store["key1"]
+				assert.NotNil(t, res.Err)
+				assert.False(t, res.Nil)
+				assert.Equal(t, "", res.Value)
+				assert.IsType(t, lock, &time.Timer{})
+				assert.IsType(t, res.Err, CacheError{})
+				done <- true
+			}(done)
+			t.Run("This should get the key normally", func(t *testing.T) {
+				res := toplayer.Get(ctx, "key1")
+				lock := memLock.store["key1"]
+				assert.Nil(t, res.Err)
+				assert.False(t, res.Nil)
+				assert.Equal(t, "val", res.Value)
+				assert.IsType(t, lock, &time.Timer{})
 			})
+			<-done
+			close(done)
 		})
 	})
 }

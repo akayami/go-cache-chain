@@ -82,6 +82,8 @@ func (l *Layer) Get(ctx context.Context, key string) CacheBackendResult {
 			}
 			p := l.child.Get(ctx, key)
 
+			l.lock.Release(ctx, key)
+
 			if p.getError() != nil {
 				return CacheBackendResult{Value: "", Nil: false, Err: p.getError()}
 			}
