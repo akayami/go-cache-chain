@@ -25,34 +25,34 @@ func TestLayerFallback(t *testing.T) {
 		backend := NewAPIBackend(getter)
 		layer := NewLayer(10*time.Millisecond, 5*time.Millisecond, backend, NewNoLock())
 
-		t.Run("with child backed", func(t *testing.T) {
+		t.Run("with childLayer backend", func(t *testing.T) {
 			mem := NewMemoryBackend(10)
-			layer2 := NewLayer(2*time.Millisecond, 1*time.Millisecond, mem, NewNoLock())
+			layer2 := NewLayer(20*time.Millisecond, 10*time.Millisecond, mem, NewNoLock())
 			layer2.AppendLayer(layer, 0)
+			//t.Run("Noval", func(t *testing.T) {
+
 			t.Run("Noval", func(t *testing.T) {
 
-				t.Run("Noval", func(t *testing.T) {
-
-					res := layer2.Get(ctx, "noval", getter)
-					if (res.Value == "" && res.Nil == true && res.Err == nil) == false {
-						t.Errorf("Invalid response")
-					}
-				})
-				t.Run("Error", func(t *testing.T) {
-					res := layer2.Get(ctx, "error", getter)
-					if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
-						t.Errorf("Invalid response")
-					}
-				})
-
-				t.Run("Get Val", func(t *testing.T) {
-					res := layer2.Get(ctx, "key", getter)
-					assert.Nil(t, res.Err)
-					assert.False(t, res.Nil)
-					assert.Equal(t, topvalue, res.Value)
-				})
-
+				res := layer2.Get(ctx, "noval", getter)
+				if (res.Value == "" && res.Nil == true && res.Err == nil) == false {
+					t.Errorf("Invalid response")
+				}
 			})
+			t.Run("Error", func(t *testing.T) {
+				res := layer2.Get(ctx, "error", getter)
+				if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
+					t.Errorf("Invalid response")
+				}
+			})
+
+			t.Run("Get Val", func(t *testing.T) {
+				res := layer2.Get(ctx, "key", getter)
+				assert.Nil(t, res.Err)
+				assert.False(t, res.Nil)
+				assert.Equal(t, topvalue, res.Value)
+			})
+
+			//})
 			t.Run("Error", func(t *testing.T) {
 				res := layer2.Get(ctx, "error", getter)
 				if (res.Value == "" && res.Nil == false && res.Err != nil) == false {
@@ -63,16 +63,16 @@ func TestLayerFallback(t *testing.T) {
 			t.Run("Get Val", func(t *testing.T) {
 
 				res := layer2.Get(ctx, "key", getter)
-				if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
-					t.Errorf("Invalid response")
-				}
+				assert.Nil(t, res.Err)
+				assert.False(t, res.Nil)
+				assert.Equal(t, topvalue, res.Value)
 
 				time.Sleep(1 * time.Millisecond)
 				t.Run("Get cached Value", func(t *testing.T) {
 					res := layer2.Get(ctx, "key", getter)
-					if (res.Value == topvalue && res.Nil == false && res.Err == nil) == false {
-						t.Errorf("Invalid response")
-					}
+					assert.Nil(t, res.Err)
+					assert.False(t, res.Nil)
+					assert.Equal(t, topvalue, res.Value)
 				})
 			})
 		})
@@ -124,6 +124,7 @@ func TestLayerFallback(t *testing.T) {
 			assert.False(t, res.Nil)
 			assert.Equal(t, res.Value, "1")
 			time.Sleep(1 * timeUnit) // Wait to let the lookup update cache
+			assert.NotNil(t, mem.store["inc"])
 			t.Run("This should not go to lower level, should get it from local store", func(t *testing.T) {
 				assert.Equal(t, counter, 1)
 				res := toplayer.Get(ctx, "inc", getter)
@@ -133,6 +134,7 @@ func TestLayerFallback(t *testing.T) {
 				assert.Equal(t, "1", res.Value)
 			})
 			time.Sleep(11 * timeUnit) // Wait 35 to exceed the stale Value
+			assert.NotNil(t, mem.store["inc"])
 			t.Run("Should get the stale Value and trigger refresh", func(t *testing.T) {
 				assert.Equal(t, 1, counter)
 				res := toplayer.Get(ctx, "inc", getter)

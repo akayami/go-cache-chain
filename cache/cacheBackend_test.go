@@ -8,21 +8,21 @@ import (
 func TestNewCacheBackendResult(t *testing.T) {
 	obj := NewCacheBackendResult()
 	t.Run("Needs to store and retrieve a Value", func(t *testing.T) {
-		obj.setValue("Value")
-		if obj.getValue() != "Value" {
+		obj.Value = "Value"
+		if obj.Value != "Value" {
 			t.Errorf("Invalid Value")
 		}
 	})
 	t.Run("Needs to store and retrieve Nil state", func(t *testing.T) {
-		obj.setNil(true)
-		if !obj.isNil() {
+		obj.Nil = true
+		if !obj.Nil {
 			t.Errorf("Invalid Value. isNil should be true")
 		}
 	})
 
 	t.Run("Needs to store and retrieve Nil state", func(t *testing.T) {
-		obj.setError(errors.New("Error"))
-		if obj.getError() == nil {
+		obj.Err = errors.New("Error")
+		if obj.Err == nil {
 			t.Errorf("Invalid Value. isNil should be true")
 		}
 	})

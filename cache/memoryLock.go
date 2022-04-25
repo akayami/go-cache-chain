@@ -16,8 +16,8 @@ func NewMemoryLock() *MemoryLock {
 }
 
 func (c *MemoryLock) Acquire(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	//c.mu.Lock()
-	//defer c.mu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if _, ok := c.store[key]; !ok {
 		c.store[key] = time.AfterFunc(ttl, func() {
 			delete(c.store, key)

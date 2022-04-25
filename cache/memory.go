@@ -19,12 +19,12 @@ func NewMemoryBackend(size int) *MemoryBackend {
 func (c *MemoryBackend) Get(ctx context.Context, key string) *CacheBackendResult {
 	res := NewCacheBackendResult()
 	if val, ok := c.store[key]; ok {
-		res.setValue(val)
+		res.Value = val
 		first := c.list[0]
 		c.list = c.list[1:]
 		c.list = append(c.list, first)
 	} else {
-		res.setNil(true)
+		res.Nil = true
 	}
 	return res
 }

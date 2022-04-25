@@ -23,11 +23,11 @@ func (t *RedisCacheBackend) Get(ctx context.Context, key string) *CacheBackendRe
 	res := NewCacheBackendResult()
 	val, err := t.client.Get(ctx, key).Result()
 	if err == redis.Nil {
-		res.setNil(true)
+		res.Nil = true
 	} else if err != nil {
-		res.setError(err)
+		res.Err = err
 	} else {
-		res.setValue(val)
+		res.Value = val
 	}
 	return res
 }

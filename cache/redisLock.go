@@ -12,7 +12,7 @@ type RedisLock struct {
 }
 
 func NewRedisLock(client *redis.Client) *RedisLock {
-	return &RedisLock{client: client, prefix: "lock_"}
+	return NewRedisLockWithPrefix(client, "lock_")
 }
 
 func NewRedisLockWithPrefix(client *redis.Client, prefix string) *RedisLock {

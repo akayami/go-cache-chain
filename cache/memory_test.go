@@ -11,45 +11,45 @@ func TestMemoryBacked(t *testing.T) {
 	backend := NewMemoryBackend(10)
 	t.Run("Empty Tests", func(t *testing.T) {
 		res := backend.Get(ctx, "key")
-		if res.isNil() != true {
+		if res.Nil != true {
 			t.Errorf("Invalid result")
 		}
 
-		if res.getValue() != "" {
+		if res.Value != "" {
 			t.Errorf("Invalid result. String must be empty")
 		}
 
-		if res.getError() != nil {
+		if res.Err != nil {
 			t.Errorf("Error has to be Nil")
 		}
 	})
 	t.Run("Test with a Value", func(t *testing.T) {
 		backend.Set(ctx, "test", "testvalue", 0)
 		res := backend.Get(ctx, "test")
-		if res.isNil() != false {
+		if res.Nil != false {
 			t.Errorf("Invalid result")
 		}
 
-		if res.getValue() != "testvalue" {
+		if res.Value != "testvalue" {
 			t.Errorf("Invalid result. String must be empty")
 		}
 
-		if res.getError() != nil {
+		if res.Err != nil {
 			t.Errorf("Error has to be Nil")
 		}
 	})
 	t.Run("Overwrite a Value", func(t *testing.T) {
 		backend.Set(ctx, "test", "testvalue2", 0)
 		res := backend.Get(ctx, "test")
-		if res.isNil() != false {
+		if res.Nil != false {
 			t.Errorf("Invalid result")
 		}
 
-		if res.getValue() != "testvalue2" {
+		if res.Value != "testvalue2" {
 			t.Errorf("Invalid result. String must be empty")
 		}
 
-		if res.getError() != nil {
+		if res.Err != nil {
 			t.Errorf("Error has to be Nil")
 		}
 		if backend.GetSize() != 1 {
@@ -63,15 +63,15 @@ func TestMemoryBacked(t *testing.T) {
 			t.Errorf("List should be empty - Actual length %d", l)
 		}
 		res := backend.Get(ctx, "test")
-		if res.isNil() != true {
+		if res.Nil != true {
 			t.Errorf("Invalid result")
 		}
 
-		if res.getValue() != "" {
+		if res.Value != "" {
 			t.Errorf("Invalid result. String must be empty")
 		}
 
-		if res.getError() != nil {
+		if res.Err != nil {
 			t.Errorf("Error has to be Nil")
 		}
 
