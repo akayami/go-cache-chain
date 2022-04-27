@@ -11,6 +11,14 @@ import (
 	"time"
 )
 
+type LayerInterface interface {
+	AppendLayer(layer *Layer, childLockTTL time.Duration)
+	Get(ctx context.Context, key string, fallback Getter) CacheBackendResult
+	Set(ctx context.Context, key string, value string, setter Setter) (string, error)
+	Insert(ctx context.Context, keycontext string, value string, creator Creator) (string, string, error)
+	Delete(ctx context.Context, key string, deleter Deleter) error
+}
+
 type CacheError struct {
 	Message string
 }
@@ -58,7 +66,7 @@ func (l *Layer) getFromBackend(ctx context.Context, key string) *UnmarshaledBack
 		r.Nil = res.Nil
 		return r
 	}
-	if res.needsMarshalling {
+	if l.backend.IsMarshaled() {
 		payload, e := l.unmarshal([]byte(res.Value))
 		if e != nil {
 			r.Err = e
@@ -72,11 +80,17 @@ func (l *Layer) getFromBackend(ctx context.Context, key string) *UnmarshaledBack
 }
 
 func (l *Layer) putIntoBackend(ctx context.Context, key string, payload payload) error {
-	marshaled, err := l.marshal(payload)
-	if err != nil {
-		return err
+	if l.backend.IsMarshaled() {
+		marshaled, err := l.marshal(payload)
+		if err != nil {
+			return err
+		}
+		_, e := l.backend.Set(ctx, key, string(marshaled), l.ttl)
+		return e
+	} else {
+		_, e := l.backend.Set(ctx, key, payload.Payload, l.ttl)
+		return e
 	}
-	return l.backend.Set(ctx, key, string(marshaled), l.ttl)
 }
 
 func (l *Layer) marshal(payload payload) ([]byte, error) {
@@ -212,6 +226,25 @@ func (l *Layer) Insert(ctx context.Context, keycontext string, value string, cre
 		return "", "", e
 	}
 	return id, v, nil
+}
+
+func (l *Layer) Delete(ctx context.Context, key string, deleter Deleter) error {
+	if l.childLayer != nil {
+		err := l.childLayer.Delete(ctx, key, deleter)
+		if err != nil {
+			return err
+		}
+	} else if deleter != nil {
+		err := deleter(ctx, key)
+		if err != nil {
+			return err
+		}
+	}
+	err := l.backend.Del(ctx, key)
+	if err != nil {
+		log.Println(err)
+	}
+	return nil
 }
 
 func (l *Layer) refresh(ctx context.Context, key string, fallback Getter) {

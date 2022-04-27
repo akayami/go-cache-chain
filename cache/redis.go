@@ -32,8 +32,8 @@ func (t *RedisCacheBackend) Get(ctx context.Context, key string) *CacheBackendRe
 	return res
 }
 
-func (t *RedisCacheBackend) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
-	return t.client.Set(ctx, key, value, ttl).Err()
+func (t *RedisCacheBackend) Set(ctx context.Context, key string, value string, ttl time.Duration) (string, error) {
+	return value, t.client.Set(ctx, key, value, ttl).Err()
 }
 
 func (t *RedisCacheBackend) Del(ctx context.Context, key string) error {

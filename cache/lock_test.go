@@ -2,6 +2,8 @@ package cache
 
 import (
 	"context"
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -74,29 +76,18 @@ func CommonLockTests(ctx context.Context, client Lock, t *testing.T) {
 		lock := client
 		// Should acquire a lock
 		locked, err := lock.Acquire(ctx, "test2", 1*duration)
-		if err != nil {
-			t.Error(err)
-		}
-		if !locked {
-			t.Errorf("Should lock")
-		}
+		assert.Nil(t, err)
+		assert.True(t, locked)
 		// Should fail to acquire due to timeout not passing
 		locked2, err2 := lock.Acquire(ctx, "test2", 1*duration)
-		if err2 != nil {
-			t.Error(err2)
-		}
-		if locked2 {
-			t.Errorf("Should not lock")
-		}
-		time.Sleep(2 * duration)
+		assert.Nil(t, err2)
+		assert.False(t, locked2)
+		time.Sleep(3 * duration)
 		// Should acquire after 2ms wait-time
 		locked3, err3 := lock.Acquire(ctx, "test2", 1*duration)
-		if err2 != nil {
-			t.Error(err3)
-		}
-		if !locked3 {
-			t.Errorf("Should lock")
-		}
+		fmt.Println(err3)
+		assert.Nil(t, err3)
+		assert.True(t, locked3)
 	})
 
 }

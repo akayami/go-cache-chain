@@ -25,7 +25,7 @@ func TestPresistent(t *testing.T) {
 			return val, false, nil
 		}
 		//fallback := Fallback{Getter: getter, TTL: time.Minute}
-		ApiBackend := NewAPIBackend(getter)
+		ApiBackend := NewAPIBackend(getter, nil, nil, nil)
 
 		BottomLayer := NewLayer(2*time.Hour, 1*time.Hour, ApiBackend, NewNoLock())
 		//MidLayer.AppendLayer(BottomLayer, 3*time.Second)
@@ -59,7 +59,7 @@ func TestPresistent(t *testing.T) {
 		}
 
 		//fallback := Fallback{Getter: getter, TTL: time.Minute}
-		ApiBackend := NewAPIBackend(getter)
+		ApiBackend := NewAPIBackend(getter, nil, nil, nil)
 
 		BottomLayer := NewLayer(2*time.Hour, 1*time.Hour, ApiBackend, NewNoLock())
 		//MidLayer.AppendLayer(BottomLayer, 3*time.Second)

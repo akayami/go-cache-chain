@@ -22,7 +22,7 @@ func TestLayerFallback(t *testing.T) {
 			}
 			return topvalue, false, nil
 		}
-		backend := NewAPIBackend(getter)
+		backend := NewAPIBackend(getter, nil, nil, nil)
 		layer := NewLayer(10*time.Millisecond, 5*time.Millisecond, backend, NewNoLock())
 
 		t.Run("with childLayer backend", func(t *testing.T) {
@@ -167,7 +167,7 @@ func TestLayerFallback(t *testing.T) {
 			return "val", false, nil
 		}
 
-		backend := NewAPIBackend(getter)
+		backend := NewAPIBackend(getter, nil, nil, nil)
 		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
 		toplayer.AppendLayer(bottomLayer, 2*time.Second)
 

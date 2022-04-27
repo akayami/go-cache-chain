@@ -11,35 +11,11 @@ import (
 	"time"
 )
 
-//func NewTestBackend() *TestBackend {
-//	return &TestBackend{Backend{name: "Test", marshal: true}, nil}
-//}
-//
-//type TestBackend struct {
-//	Backend
-//	get_handler Getter
-//}
-//
-//func (t TestBackend) Get(ctx context.Context, key string) *CacheBackendResult {
-//	//TODO implement me
-//	panic("implement me")
-//}
-//
-//func (t TestBackend) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
-//	//TODO implement me
-//	panic("implement me")
-//}
-//
-//func (t TestBackend) Del(ctx context.Context, key string) error {
-//	//TODO implement me
-//	panic("implement me")
-//}
-
 type InvalidValue struct {
 	mock.Mock
 }
 
-func (m *InvalidValue) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
+func (m *InvalidValue) Set(ctx context.Context, key string, value string, ttl time.Duration) (string, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -55,8 +31,7 @@ func (m *InvalidValue) GetName() string {
 }
 
 func (m *InvalidValue) IsMarshaled() bool {
-	//TODO implement me
-	panic("implement me")
+	return true
 }
 
 func (m *InvalidValue) Get(ctx context.Context, key string) *CacheBackendResult {
@@ -105,7 +80,7 @@ func TestLayer(t *testing.T) {
 			}
 			return topvalue, false, nil
 		}
-		backend := NewAPIBackend(getter)
+		backend := NewAPIBackend(getter, nil, nil, nil)
 		layer := NewLayer(10*time.Millisecond, 5*time.Millisecond, backend, NewNoLock())
 
 		t.Run("Payload Marshaling", func(t *testing.T) {
@@ -235,7 +210,7 @@ func TestLayer(t *testing.T) {
 			}
 			return topvalue, false, nil
 		}
-		backend := NewAPIBackend(getter)
+		backend := NewAPIBackend(getter, nil, nil, nil)
 		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
 		toplayer.AppendLayer(bottomLayer, 0)
 		t.Run("Triggering lookup in lower level", func(t *testing.T) {
@@ -303,7 +278,7 @@ func TestLayer(t *testing.T) {
 			return "val", false, nil
 		}
 
-		backend := NewAPIBackend(getter)
+		backend := NewAPIBackend(getter, nil, nil, nil)
 		bottomLayer := NewLayer(200*timeUnit, 150*timeUnit, backend, NewNoLock())
 		toplayer.AppendLayer(bottomLayer, 2*time.Second)
 
@@ -423,5 +398,56 @@ func TestLayer(t *testing.T) {
 			// After backend is called and new value is retrieved local cache is changed.
 			assert.Equal(t, "newval", res.Value)
 		})
+	})
+
+	t.Run("Test Delete Logic", func(t *testing.T) {
+		t.Run("Basic Delete", func(t *testing.T) {
+			mem := NewMemoryBackend(10)
+			memLock := NewMemoryLock()
+			layer := NewLayer(100*time.Millisecond, 20*time.Millisecond, mem, memLock)
+			setter := Setter(func(ctx context.Context, key string, val string) (string, error) {
+				assert.Equal(t, "test", key)
+				assert.Equal(t, "value", val)
+				return val, nil
+			})
+			val, e := layer.Set(ctx, "test", "value", setter)
+			assert.Nil(t, e)
+			assert.Equal(t, "value", val)
+			time.Sleep(5 * time.Millisecond)
+			res := layer.Get(ctx, "test", nil)
+			assert.Equal(t, "value", res.Value)
+			ping := 0
+			layer.Delete(ctx, "test", func(ctx context.Context, key string) error {
+				ping++
+				return nil
+			})
+			res = layer.Get(ctx, "test", nil)
+			assert.True(t, res.Nil)
+			assert.Equal(t, "", res.Value)
+			assert.Equal(t, 1, ping)
+		})
+		t.Run("Deleter errors out", func(t *testing.T) {
+			mem := NewMemoryBackend(10)
+			memLock := NewMemoryLock()
+			layer := NewLayer(100*time.Millisecond, 20*time.Millisecond, mem, memLock)
+			ping := 0
+			err := layer.Delete(ctx, "test", func(ctx context.Context, key string) error {
+				ping++
+				return errors.New("Some new error")
+			})
+			assert.NotNil(t, err)
+		})
+		t.Run("Backend erexarors out", func(t *testing.T) {
+			mem := NewMemoryBackend(10)
+			memLock := NewMemoryLock()
+			layer := NewLayer(100*time.Millisecond, 20*time.Millisecond, mem, memLock)
+			ping := 0
+			err := layer.Delete(ctx, "test", func(ctx context.Context, key string) error {
+				ping++
+				return errors.New("Some new error")
+			})
+			assert.NotNil(t, err)
+		})
+
 	})
 }

@@ -16,12 +16,14 @@ func NewMemoryLock() *MemoryLock {
 }
 
 func (c *MemoryLock) Acquire(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	if _, ok := c.store[key]; !ok {
+		c.mu.Lock()
 		c.store[key] = time.AfterFunc(ttl, func() {
+			c.mu.Lock()
 			delete(c.store, key)
+			c.mu.Unlock()
 		})
+		c.mu.Unlock()
 		return true, nil
 	} else {
 		return false, nil
@@ -29,8 +31,8 @@ func (c *MemoryLock) Acquire(ctx context.Context, key string, ttl time.Duration)
 }
 
 func (c *MemoryLock) Release(ctx context.Context, key string) error {
-	//c.mu.Lock()
-	//defer c.mu.Unlock()
+	c.mu.Lock()
 	delete(c.store, key)
+	c.mu.Unlock()
 	return nil
 }
