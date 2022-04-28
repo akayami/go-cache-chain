@@ -27,7 +27,7 @@ func main() {
 		// This is a stub returning some value. Under normal circumstances, this should wrap some more complex logic fetching data from API, DB or some other store
 		counter++
 		return strconv.Itoa(counter), false, nil
-	})
+	}, nil, nil, nil)
 
 	// Setting up the layer
 	BottomLayer := cache.NewLayer(2*time.Hour, 1*time.Hour, ApiBackend, cache.NewNoLock())
