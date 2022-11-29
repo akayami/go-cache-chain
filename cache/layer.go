@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/akayami/go-cache-chain/cache/schema"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"os"

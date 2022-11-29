@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-type Getter func(context.Context, string) (string, bool, error)
+type Getter func(ctx context.Context, key string) (string, bool, error)
 
-type Setter func(context.Context, string, string) (string, error)
+type Setter func(ctx context.Context, key string, val string) (string, error)
 
 type Creator func(ctx context.Context, keyPrefix string, value string) (string, error)
 
