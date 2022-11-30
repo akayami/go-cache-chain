@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/go-redis/redis/v8 v8.11.4
+	github.com/hashicorp/golang-lru v0.6.0
 	github.com/mailru/easyjson v0.7.7
 	github.com/stretchr/testify v1.5.1
 	google.golang.org/protobuf v1.28.1
