@@ -2,14 +2,14 @@ package cache
 
 import (
 	"context"
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"testing"
 	"time"
 )
 
 func TestGolangLRUCacheBackend(t *testing.T) {
 	ctx := context.TODO()
-	handle, e := lru.New(10)
+	handle, e := lru.New[string, string](10)
 	if e != nil {
 		t.Error(e)
 	}
@@ -17,7 +17,7 @@ func TestGolangLRUCacheBackend(t *testing.T) {
 	cache := NewGolangLRUBackend(handle)
 
 	t.Run("Gets Nil on no key request", func(t *testing.T) {
-		if !cache.Get(ctx, key).Nil {
+		if !cache.Get(ctx, "test").Nil {
 			t.Error("Expected Nil to be false")
 		}
 	})
